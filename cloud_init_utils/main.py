@@ -60,13 +60,10 @@ def main():
 
         config = utils.parse_config(parsed_args.config)
 
-        root_logger.info("config: `%s`", config)
-
-
         # run the function associated with each sub command
         if "func_to_run" in parsed_args:
 
-            parsed_args.func_to_run(parsed_args)
+            parsed_args.func_to_run(config)
 
         else:
             root_logger.info("no subcommand specified!")

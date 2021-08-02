@@ -1,5 +1,8 @@
 import logging
 
+from cloud_init_utils import utils
+
+
 logger = logging.getLogger(__name__)
 
 class CreateYaml:
@@ -22,6 +25,13 @@ class CreateYaml:
         parser.set_defaults(func_to_run=create_yaml_obj.run)
 
 
-    def run(self, parsed_args):
+    def run(self, config):
 
-        logger.info("hey there")
+        logger.info("config: `%s`", config)
+
+
+        yaml_dict = utils.get_yaml_file_string_from_dict(
+            config.cloud_init_settings.format_as_yaml_dict())
+
+        import pprint
+        logger.info("yaml dict: `%s`", pprint.pformat(yaml_dict))
