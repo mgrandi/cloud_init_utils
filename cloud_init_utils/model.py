@@ -8,11 +8,8 @@ import attr
 
 
 
-
-
-
 @attr.s(auto_attribs=True, frozen=True, kw_only=True)
-class CloudInitFileToWrite:
+class FileToWrite:
 
 
     file_path:pathlib.Path = attr.ib()
@@ -71,6 +68,14 @@ class CloudInitFileToWrite:
         return final_dict
 
 
+@attr.s(auto_attribs=True, frozen=True, kw_only=True)
+class BootstrapScriptSettings:
+
+    root_folder:pathlib.Path = attr.ib()
+    github_zip_url:str = attr.ib()
+    command_line:typing.Sequence[str] = attr.ib()
+    acceptable_status_codes:typing.Sequence[int] = attr.ib()
+    files_to_write:typing.Sequence[FileToWrite] = attr.ib()
 
 
 @attr.s(auto_attribs=True, frozen=True, kw_only=True)
@@ -82,7 +87,7 @@ class CloudInitSettings:
     password:str = attr.ib()
     packages_to_install:list = attr.ib()
     byobu_enable:bool = attr.ib()
-    files_to_write:typing.Sequence[CloudInitFileToWrite] = attr.ib()
+    files_to_write:typing.Sequence[FileToWrite] = attr.ib()
 
 
     def format_as_yaml_dict(self) -> dict:
@@ -135,6 +140,7 @@ class ConfigFileSettings:
 
 
     cloud_init_settings:CloudInitSettings = attr.ib()
+    bootstrap_script_settings:BootstrapScriptSettings = attr.ib()
 
 
 

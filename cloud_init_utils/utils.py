@@ -1,6 +1,7 @@
 import pathlib
 import argparse
 import logging
+import typing
 import io
 
 import arrow
@@ -9,7 +10,7 @@ import ruamel.yaml
 
 from cloud_init_utils import constants
 from cloud_init_utils.model import HoconTypesEnum, ConfigFileSettings
-from cloud_init_utils.model import CloudInitFileToWrite, CloudInitSettings, ConfigFileSettings
+from cloud_init_utils.model import FileToWrite, CloudInitSettings, ConfigFileSettings, BootstrapScriptSettings
 
 class ArrowLoggingFormatter(logging.Formatter):
     ''' logging.Formatter subclass that uses arrow, that formats the timestamp
@@ -38,16 +39,9 @@ def get_yaml_file_string_from_dict(input_dict:dict) -> str:
     yaml_dictionary = ruamel.yaml.comments.CommentedMap(input_dict)
 
     # add the comment
-    # we can't call the handly method on `ruamel.yaml.comments.CommentedMap`: `yaml_set_start_comment()` because it
-    # adds a space between the `#` and the rest of the comment, and we need it to be WITHOUT a space, see the examples
-    # for cloudinit: https://cloudinit.readthedocs.io/en/latest/topics/examples.html
-    # so we have to hack together some thing to add a comment without a space
-    # see https://sourceforge.net/p/ruamel-yaml/tickets/371/
-    yaml_dictionary._yaml_get_pre_comment().append(cloud_config_comment_token)
-
-    # TODO: maybe write the input_dict or some other identifying info to the end of line comment of the yaml
-    # so we can tell which yaml goes to which instance without decompressing the gzip script and looking at the
-    # variables
+    # add the # at the beginning to force it to not have a space becuase
+    # cloud-init needs needs the comment to not have a space after the `#`
+    yaml_dictionary.yaml_set_start_comment("#cloud-config")
 
     # then write the commented map with the comment to the StringIO
     yaml_handle.dump(yaml_dictionary, yaml_string_io)
@@ -154,6 +148,45 @@ def hocon_config_file_type(stringArg):
 
     return conf
 
+
+def _parse_files_to_write_list(
+    config_obj_list:typing.Sequence[pyhocon.config_tree.ConfigTree]) -> typing.Sequence[FileToWrite]:
+
+    list_of_files_to_write_objs = []
+
+    for iter_file_to_write_config_obj in config_obj_list:
+
+        file_path_key = f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_FILE_PATH}"
+        file_path = _get_key_or_throw(iter_file_to_write_config_obj, file_path_key, HoconTypesEnum.STRING)
+
+        owner_username_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_OWNER_USERNAME}"
+        owner_username = _get_key_or_throw(iter_file_to_write_config_obj, owner_username_key, HoconTypesEnum.STRING)
+
+        owner_group_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_OWNER_GROUP}"
+        owner_group = _get_key_or_throw(iter_file_to_write_config_obj, owner_group_key, HoconTypesEnum.STRING)
+
+        permission_octal_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_PERMISSION_OCTAL}"
+        permission_octal = _get_key_or_throw(iter_file_to_write_config_obj, permission_octal_key, HoconTypesEnum.STRING)
+
+        payload_is_base64_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_PAYLOAD_IS_BASE64}"
+        payload_is_base64 = _get_key_or_throw(iter_file_to_write_config_obj, payload_is_base64_key, HoconTypesEnum.BOOLEAN)
+
+        payload_content_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_PAYLOAD_CONTENT}"
+        payload_content = _get_key_or_throw(iter_file_to_write_config_obj, payload_content_key, HoconTypesEnum.STRING)
+
+
+        new_obj = FileToWrite(
+            file_path=file_path,
+            owner_username=owner_username,
+            owner_group=owner_group,
+            permission_octal=permission_octal,
+            payload_is_base64=payload_is_base64,
+            payload_content=payload_content)
+
+        list_of_files_to_write_objs.append(new_obj)
+
+    return list_of_files_to_write_objs
+
 def parse_config(config_obj) -> ConfigFileSettings:
     ''' parse the config into our settings object
 
@@ -163,6 +196,38 @@ def parse_config(config_obj) -> ConfigFileSettings:
     top_level_key = f"{constants.HOCON_CONFIG_KEY_TOP_LEVEL_GROUP}"
     top_level_obj = _get_key_or_throw(config_obj, top_level_key, HoconTypesEnum.CONFIG)
 
+    # bootstrap script settings group
+
+    bootstrap_script_group_key = f"{top_level_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_GROUP}"
+    bootstrap_script_group = _get_key_or_throw(config_obj, bootstrap_script_group_key, HoconTypesEnum.CONFIG)
+
+    root_folder_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_ROOT_FOLDER}"
+    root_folder = _get_key_or_throw(config_obj, root_folder_key, HoconTypesEnum.STRING)
+
+    github_zip_url_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_GITHUB_ZIP_URL}"
+    github_zip_url = _get_key_or_throw(config_obj, github_zip_url_key, HoconTypesEnum.STRING)
+
+    command_line_list_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_COMMAND_LINE_LIST}"
+    command_line_list = _get_key_or_throw(config_obj, command_line_list_key, HoconTypesEnum.LIST)
+
+    acceptable_status_codes_list_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_ACCEPTABLE_STATUS_CODES_LIST}"
+    acceptable_status_codes_list = _get_key_or_throw(config_obj, acceptable_status_codes_list_key, HoconTypesEnum.LIST)
+
+    bootstrap_files_to_write_list_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_FILES_TO_WRITE_LIST}"
+    bootstrap_files_to_write_list = _get_key_or_throw(config_obj, bootstrap_files_to_write_list_key, HoconTypesEnum.LIST)
+
+    list_of_bootstrap_files_to_write = _parse_files_to_write_list(bootstrap_files_to_write_list)
+
+    bootstrap_script_settings = BootstrapScriptSettings(
+        root_folder=root_folder,
+        github_zip_url=github_zip_url,
+        command_line=command_line_list,
+        acceptable_status_codes=acceptable_status_codes_list,
+        files_to_write=list_of_bootstrap_files_to_write
+    )
+
+
+    # cloud init settings group
 
     cloud_init_settings_key = f"{top_level_key}.{constants.HOCON_CONFIG_KEY_CLOUD_INIT_SETTINGS_GROUP}"
 
@@ -186,38 +251,7 @@ def parse_config(config_obj) -> ConfigFileSettings:
     files_to_write_list = _get_key_or_throw(config_obj, files_to_write_key, HoconTypesEnum.LIST)
 
 
-    list_of_files_to_write_objs = []
-
-    for iter_file_to_write_config_obj in files_to_write_list:
-
-        file_path_key = f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_FILE_PATH}"
-        file_path = _get_key_or_throw(iter_file_to_write_config_obj, file_path_key, HoconTypesEnum.STRING)
-
-        owner_username_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_OWNER_USERNAME}"
-        owner_username = _get_key_or_throw(iter_file_to_write_config_obj, owner_username_key, HoconTypesEnum.STRING)
-
-        owner_group_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_OWNER_GROUP}"
-        owner_group = _get_key_or_throw(iter_file_to_write_config_obj, owner_group_key, HoconTypesEnum.STRING)
-
-        permission_octal_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_PERMISSION_OCTAL}"
-        permission_octal = _get_key_or_throw(iter_file_to_write_config_obj, permission_octal_key, HoconTypesEnum.STRING)
-
-        payload_is_base64_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_PAYLOAD_IS_BASE64}"
-        payload_is_base64 = _get_key_or_throw(iter_file_to_write_config_obj, payload_is_base64_key, HoconTypesEnum.BOOLEAN)
-
-        payload_content_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_PAYLOAD_CONTENT}"
-        payload_content = _get_key_or_throw(iter_file_to_write_config_obj, payload_content_key, HoconTypesEnum.STRING)
-
-
-        new_obj = CloudInitFileToWrite(
-            file_path=file_path,
-            owner_username=owner_username,
-            owner_group=owner_group,
-            permission_octal=permission_octal,
-            payload_is_base64=payload_is_base64,
-            payload_content=payload_content)
-
-        list_of_files_to_write_objs.append(new_obj)
+    list_of_files_to_write_objs = _parse_files_to_write_list(files_to_write_list)
 
 
     cloud_init_settings = CloudInitSettings(
@@ -230,7 +264,8 @@ def parse_config(config_obj) -> ConfigFileSettings:
 
 
     config_settings = ConfigFileSettings(
-        cloud_init_settings=cloud_init_settings)
+        cloud_init_settings=cloud_init_settings,
+        bootstrap_script_settings=bootstrap_script_settings)
 
     return config_settings
 

@@ -63,7 +63,7 @@ def main():
         # run the function associated with each sub command
         if "func_to_run" in parsed_args:
 
-            parsed_args.func_to_run(config)
+            parsed_args.func_to_run(config, parsed_args)
 
         else:
             root_logger.info("no subcommand specified!")
