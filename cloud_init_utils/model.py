@@ -5,6 +5,7 @@ import base64
 import gzip
 
 import attr
+import chevron
 
 
 
@@ -17,6 +18,7 @@ class FileToWrite:
     owner_group:str = attr.ib()
     permission_octal:str = attr.ib()
 
+    use_mustache_template:bool = attr.ib()
 
     # if true, we won't base64 the payload
     payload_is_base64:bool = attr.ib()

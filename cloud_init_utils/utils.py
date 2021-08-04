@@ -165,6 +165,9 @@ def _parse_files_to_write_list(
         owner_group_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_OWNER_GROUP}"
         owner_group = _get_key_or_throw(iter_file_to_write_config_obj, owner_group_key, HoconTypesEnum.STRING)
 
+        use_mustache_template_key = f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_USE_MUSTACHE_TEMPLATE}"
+        use_mustache_template = _get_key_or_throw(iter_file_to_write_config_obj, use_mustache_template_key, HoconTypesEnum.BOOLEAN)
+
         permission_octal_key =  f"{constants.HOCON_CONFIG_KEY_CLOUD_INIT_FILES_TO_WRITE_PERMISSION_OCTAL}"
         permission_octal = _get_key_or_throw(iter_file_to_write_config_obj, permission_octal_key, HoconTypesEnum.STRING)
 
@@ -180,6 +183,7 @@ def _parse_files_to_write_list(
             owner_username=owner_username,
             owner_group=owner_group,
             permission_octal=permission_octal,
+            use_mustache_template=use_mustache_template,
             payload_is_base64=payload_is_base64,
             payload_content=payload_content)
 
