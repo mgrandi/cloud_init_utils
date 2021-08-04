@@ -204,8 +204,12 @@ def parse_config(config_obj) -> ConfigFileSettings:
     root_folder_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_ROOT_FOLDER}"
     root_folder = _get_key_or_throw(config_obj, root_folder_key, HoconTypesEnum.STRING)
 
-    github_zip_url_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_GITHUB_ZIP_URL}"
-    github_zip_url = _get_key_or_throw(config_obj, github_zip_url_key, HoconTypesEnum.STRING)
+    zip_url_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_ZIP_URL}"
+    zip_url = _get_key_or_throw(config_obj, zip_url_key, HoconTypesEnum.STRING)
+
+    zip_root_folder_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_ZIP_ROOT_FOLDER}"
+    zip_root_folder = _get_key_or_throw(config_obj, zip_root_folder_key, HoconTypesEnum.STRING)
+
 
     command_line_list_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_COMMAND_LINE_LIST}"
     command_line_list = _get_key_or_throw(config_obj, command_line_list_key, HoconTypesEnum.LIST)
@@ -220,7 +224,8 @@ def parse_config(config_obj) -> ConfigFileSettings:
 
     bootstrap_script_settings = BootstrapScriptSettings(
         root_folder=root_folder,
-        github_zip_url=github_zip_url,
+        zip_url=zip_url,
+        zip_root_folder=zip_root_folder,
         command_line=command_line_list,
         acceptable_status_codes=acceptable_status_codes_list,
         files_to_write=list_of_bootstrap_files_to_write

@@ -72,7 +72,8 @@ class FileToWrite:
 class BootstrapScriptSettings:
 
     root_folder:pathlib.Path = attr.ib()
-    github_zip_url:str = attr.ib()
+    zip_url:str = attr.ib()
+    zip_root_folder:str = attr.ib()
     command_line:typing.Sequence[str] = attr.ib()
     acceptable_status_codes:typing.Sequence[int] = attr.ib()
     files_to_write:typing.Sequence[FileToWrite] = attr.ib()
