@@ -71,13 +71,19 @@ class FileToWrite:
 
 
 @attr.s(auto_attribs=True, frozen=True, kw_only=True)
+class CommandToRun:
+    command_line:typing.Sequence[str] = attr.ib()
+    acceptable_status_codes:typing.Sequence[int] = attr.ib()
+
+
+
+@attr.s(auto_attribs=True, frozen=True, kw_only=True)
 class BootstrapScriptSettings:
 
     root_folder:pathlib.Path = attr.ib()
     zip_url:str = attr.ib()
     zip_root_folder:str = attr.ib()
-    command_line:typing.Sequence[str] = attr.ib()
-    acceptable_status_codes:typing.Sequence[int] = attr.ib()
+    commands_to_run:typing.Sequence[CommandToRun] = attr.ib()
     files_to_write:typing.Sequence[FileToWrite] = attr.ib()
 
 

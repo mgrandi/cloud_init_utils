@@ -10,7 +10,7 @@ import ruamel.yaml
 
 from cloud_init_utils import constants
 from cloud_init_utils.model import HoconTypesEnum, ConfigFileSettings
-from cloud_init_utils.model import FileToWrite, CloudInitSettings, ConfigFileSettings, BootstrapScriptSettings
+from cloud_init_utils.model import FileToWrite, CloudInitSettings, ConfigFileSettings, BootstrapScriptSettings, CommandToRun
 
 class ArrowLoggingFormatter(logging.Formatter):
     ''' logging.Formatter subclass that uses arrow, that formats the timestamp
@@ -149,6 +149,27 @@ def hocon_config_file_type(stringArg):
     return conf
 
 
+def _parse_commands_to_run_list(
+     config_obj_list:typing.Sequence[pyhocon.config_tree.ConfigTree]) -> typing.Sequence[FileToWrite]:
+
+
+    list_of_commands_to_run = []
+
+    for iter_command_to_run_config_obj in config_obj_list:
+
+        cmd_line_key = f"{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_COMMAND_LINE}"
+        cmd_line_list = _get_key_or_throw(iter_command_to_run_config_obj, cmd_line_key, HoconTypesEnum.LIST)
+
+
+        acceptable_status_codes_list_key = f"{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_ACCEPTABLE_STATUS_CODES_LIST}"
+        acceptable_status_codes_list = _get_key_or_throw(iter_command_to_run_config_obj, acceptable_status_codes_list_key, HoconTypesEnum.LIST)
+
+        list_of_commands_to_run.append(CommandToRun(
+            command_line=cmd_line_list,
+            acceptable_status_codes=acceptable_status_codes_list))
+
+    return list_of_commands_to_run
+
 def _parse_files_to_write_list(
     config_obj_list:typing.Sequence[pyhocon.config_tree.ConfigTree]) -> typing.Sequence[FileToWrite]:
 
@@ -215,11 +236,10 @@ def parse_config(config_obj) -> ConfigFileSettings:
     zip_root_folder = _get_key_or_throw(config_obj, zip_root_folder_key, HoconTypesEnum.STRING)
 
 
-    command_line_list_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_COMMAND_LINE_LIST}"
-    command_line_list = _get_key_or_throw(config_obj, command_line_list_key, HoconTypesEnum.LIST)
+    commands_to_run_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_COMMANDS_TO_RUN_LIST}"
+    commands_to_run_obj = _get_key_or_throw(config_obj, commands_to_run_key, HoconTypesEnum.LIST)
+    commands_to_run = _parse_commands_to_run_list(commands_to_run_obj)
 
-    acceptable_status_codes_list_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_ACCEPTABLE_STATUS_CODES_LIST}"
-    acceptable_status_codes_list = _get_key_or_throw(config_obj, acceptable_status_codes_list_key, HoconTypesEnum.LIST)
 
     bootstrap_files_to_write_list_key = f"{bootstrap_script_group_key}.{constants.HOCON_CONFIG_KEY_BOOTSTRAP_SCRIPT_SETTINGS_FILES_TO_WRITE_LIST}"
     bootstrap_files_to_write_list = _get_key_or_throw(config_obj, bootstrap_files_to_write_list_key, HoconTypesEnum.LIST)
@@ -230,8 +250,7 @@ def parse_config(config_obj) -> ConfigFileSettings:
         root_folder=root_folder,
         zip_url=zip_url,
         zip_root_folder=zip_root_folder,
-        command_line=command_line_list,
-        acceptable_status_codes=acceptable_status_codes_list,
+        commands_to_run=commands_to_run,
         files_to_write=list_of_bootstrap_files_to_write
     )
 
